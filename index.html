@@ -1,33 +1,255 @@
-<!DOCTYPE html>
-<html lang="id">
+<!doctype html>
+<html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Portfolio Estebern </title>
-  <link rel="stylesheet" href="style.css">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Robot Showcase</title>
+<style>
+  :root { --bg: #0b0b0f; --accent: #ffd400; --text: #f2f2f2; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text);
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif; overflow: hidden; }
+  #scene { position: fixed; inset: 0; display: block; cursor: grab; }
+  #scene:active { cursor: grabbing; }
+
+  header { position: fixed; top: 0; left: 0; right: 0; padding: 20px 24px; pointer-events: none; }
+  header h1 { margin: 0; font-size: clamp(1.2rem, 3vw, 1.8rem); letter-spacing: .02em; }
+  header h1 span { color: var(--accent); }
+  header p { margin: 6px 0 0; opacity: .65; font-size: .9rem; }
+
+  #controls { position: fixed; left: 0; right: 0; bottom: 56px; display: flex; flex-wrap: wrap;
+    gap: 8px; justify-content: center; padding: 0 16px; }
+  #controls button { background: rgba(255,255,255,.08); color: var(--text); border: 1px solid rgba(255,255,255,.18);
+    padding: 8px 16px; border-radius: 999px; font: inherit; font-size: .85rem; cursor: pointer;
+    backdrop-filter: blur(6px); transition: background .2s, color .2s, border-color .2s; }
+  #controls button:hover { border-color: var(--accent); }
+  #controls button.active { background: var(--accent); color: #111; border-color: var(--accent); }
+
+  footer { position: fixed; bottom: 14px; left: 0; right: 0; text-align: center; font-size: .72rem; opacity: .5; padding: 0 16px; }
+  footer a { color: inherit; }
+
+  #status { position: fixed; inset: 0; display: grid; place-items: center; text-align: center;
+    padding: 24px; background: var(--bg); transition: opacity .6s; }
+  #status.hidden { opacity: 0; pointer-events: none; }
+  #status.error { color: #ff8a80; }
+  #status code { background: rgba(255,255,255,.1); padding: 2px 6px; border-radius: 4px; }
+</style>
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
 </head>
 <body>
-  <header>
-    <h1>Halo, saya Estebern llasdhasdasuidhwiagdkjasxbdjawhsui</h1>
-    <p>Web Developer & Designer</p>
-  </header>
+<canvas id="scene"></canvas>
 
-  <section id="tentang">
-    <h2>Tentang Saya</h2>
-    <p>Ceritakan singkat tentang dirimu di sini.</p>
-  </section>
+<header>
+  <h1>Robot <span>Showcase</span></h1>
+  <p>Drag to rotate · scroll to zoom · move your cursor · click the robot</p>
+</header>
 
-  <section id="proyek">
-    <h2>Proyek</h2>
-    <ul>
-      <li><a href="#">Proyek 1</a></li>
-      <li><a href="#">Proyek 2</a></li>
-    </ul>
-  </section>
+<div id="controls"></div>
 
-  <section id="kontak">
-    <h2>Kontak</h2>
-    <p>Email: email@kamu.com</p>
-  </section>
+<footer>
+  "Stylized / Robot – Low Poly Game-Ready" by CharlieCatling on Sketchfab, licensed under CC BY 4.0.
+</footer>
+
+<div id="status">Loading model…</div>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+
+// ---- CHANGE THIS if your file is named differently (e.g. 'robot.glb') ----
+const MODEL_URL = 'model/scene.gltf';
+
+const canvas = document.getElementById('scene');
+const statusEl = document.getElementById('status');
+const controlsEl = document.getElementById('controls');
+
+// Renderer
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setSize(innerWidth, innerHeight);
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+// Scene + lighting
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x0b0b0f);
+scene.fog = new THREE.Fog(0x0b0b0f, 8, 20);
+
+const pmrem = new THREE.PMREMGenerator(renderer);
+scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+
+const key = new THREE.DirectionalLight(0xffffff, 2.2);
+key.position.set(3, 5, 4);
+key.castShadow = true;
+key.shadow.mapSize.set(1024, 1024);
+scene.add(key);
+
+const rim = new THREE.DirectionalLight(0xffd400, 1.6); // yellow rim light
+rim.position.set(-4, 2, -3);
+scene.add(rim);
+
+// Ground (shadow catcher + soft glow ring)
+const ground = new THREE.Mesh(
+  new THREE.CircleGeometry(6, 64),
+  new THREE.ShadowMaterial({ opacity: 0.35 })
+);
+ground.rotation.x = -Math.PI / 2;
+ground.receiveShadow = true;
+scene.add(ground);
+
+const ring = new THREE.Mesh(
+  new THREE.RingGeometry(1.15, 1.2, 64),
+  new THREE.MeshBasicMaterial({ color: 0xffd400, transparent: true, opacity: 0.6, side: THREE.DoubleSide })
+);
+ring.rotation.x = -Math.PI / 2;
+ring.position.y = 0.005;
+scene.add(ring);
+
+// Camera + orbit controls
+const camera = new THREE.PerspectiveCamera(40, innerWidth / innerHeight, 0.1, 100);
+camera.position.set(0, 1.4, 5);
+
+const orbit = new OrbitControls(camera, canvas);
+orbit.enableDamping = true;
+orbit.enablePan = false;
+orbit.minDistance = 2.5;
+orbit.maxDistance = 9;
+orbit.maxPolarAngle = Math.PI * 0.52;
+orbit.target.set(0, 1, 0);
+
+// State
+const clock = new THREE.Clock();
+const pivot = new THREE.Group();   // we rotate/bounce this, not the raw model
+scene.add(pivot);
+
+let mixer = null;
+let actions = [];
+let current = null;
+let model = null;
+const pointer = new THREE.Vector2(0, 0);
+const smoothPointer = new THREE.Vector2(0, 0);
+let bounce = 0; // click "squash and stretch" impulse
+
+// Load model
+new GLTFLoader().load(
+  MODEL_URL,
+  (gltf) => {
+    model = gltf.scene;
+
+    // Auto-fit: center on X/Z, sit on the floor, scale to ~2 units tall
+    const box = new THREE.Box3().setFromObject(model);
+    const size = box.getSize(new THREE.Vector3());
+    const scale = 2 / Math.max(size.y, 0.0001);
+    model.scale.setScalar(scale);
+    box.setFromObject(model);
+    const center = box.getCenter(new THREE.Vector3());
+    model.position.x -= center.x;
+    model.position.z -= center.z;
+    model.position.y -= box.min.y;
+
+    model.traverse((o) => {
+      if (o.isMesh) { o.castShadow = true; o.receiveShadow = false; }
+    });
+    pivot.add(model);
+
+    // Animations: build one button per clip found in the file
+    if (gltf.animations.length) {
+      mixer = new THREE.AnimationMixer(model);
+      actions = gltf.animations.map((clip) => {
+        const action = mixer.clipAction(clip);
+        return { name: clip.name || 'Animation', action };
+      });
+      actions.forEach((a, i) => {
+        const btn = document.createElement('button');
+        btn.textContent = a.name;
+        btn.addEventListener('click', () => play(i));
+        controlsEl.appendChild(btn);
+        a.button = btn;
+      });
+      // Prefer an idle clip to start with
+      const idle = actions.findIndex((a) => /idle|idol|stand/i.test(a.name));
+      play(idle >= 0 ? idle : 0);
+    }
+
+    statusEl.classList.add('hidden');
+  },
+  (e) => {
+    if (e.total) statusEl.textContent = `Loading model… ${Math.round((e.loaded / e.total) * 100)}%`;
+  },
+  (err) => {
+    console.error(err);
+    statusEl.classList.add('error');
+    statusEl.innerHTML = `Couldn't load <code>${MODEL_URL}</code>.<br><br>
+      Put the downloaded model there and open this page through a local server
+      (not by double-clicking the file).`;
+  }
+);
+
+function play(i) {
+  const next = actions[i];
+  if (!next || next === current) return;
+  next.action.reset().fadeIn(0.3).play();
+  if (current) current.action.fadeOut(0.3);
+  actions.forEach((a) => a.button.classList.toggle('active', a === next));
+  current = next;
+}
+
+// Interaction: cursor makes the robot look toward you
+addEventListener('pointermove', (e) => {
+  pointer.x = (e.clientX / innerWidth) * 2 - 1;
+  pointer.y = (e.clientY / innerHeight) * 2 - 1;
+});
+
+// Interaction: clicking the robot cycles animation + bounces it
+const raycaster = new THREE.Raycaster();
+let downAt = null;
+canvas.addEventListener('pointerdown', (e) => { downAt = { x: e.clientX, y: e.clientY }; });
+canvas.addEventListener('pointerup', (e) => {
+  // ignore drags (orbiting); only treat as click if the pointer barely moved
+  if (!downAt || Math.hypot(e.clientX - downAt.x, e.clientY - downAt.y) > 5 || !model) return;
+  const ndc = new THREE.Vector2((e.clientX / innerWidth) * 2 - 1, -(e.clientY / innerHeight) * 2 + 1);
+  raycaster.setFromCamera(ndc, camera);
+  if (raycaster.intersectObject(model, true).length) {
+    bounce = 1;
+    if (actions.length > 1) play((actions.indexOf(current) + 1) % actions.length);
+  }
+});
+
+addEventListener('resize', () => {
+  camera.aspect = innerWidth / innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+});
+
+// Render loop
+renderer.setAnimationLoop(() => {
+  const dt = clock.getDelta();
+  if (mixer) mixer.update(dt);
+
+  // Smoothly follow the cursor with a gentle turn/tilt
+  smoothPointer.lerp(pointer, 1 - Math.pow(0.001, dt));
+  pivot.rotation.y = smoothPointer.x * 0.6;
+  pivot.rotation.x = smoothPointer.y * 0.12;
+
+  // Click bounce (decaying squash & stretch)
+  bounce = Math.max(0, bounce - dt * 2.5);
+  const s = Math.sin(bounce * Math.PI * 3) * bounce * 0.12;
+  pivot.scale.set(1 - s * 0.5, 1 + s, 1 - s * 0.5);
+
+  orbit.update();
+  renderer.render(scene, camera);
+});
+</script>
 </body>
 </html>
