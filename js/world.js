@@ -216,7 +216,7 @@
         b.mat.emissiveIntensity = 0.55 + b.glow * 0.7;
       }
 
-      emblem.position.y = lerp(6.1, 0.55, e) + Math.sin(opts.time * 1.2) * 0.12 * (1 - e) * opts.calm;
+      emblem.position.y = lerp(1.1, 0.55, e) + Math.sin(opts.time * 1.2) * 0.12 * (1 - e) * opts.calm;
       emblem.rotation.y = Math.sin(opts.time * 0.35) * 0.08 * (1 - e) * opts.calm;
 
       glow.intensity = 0.9 + Math.sin(opts.time * 1.7) * 0.25 * opts.calm + (opts.hoverEmblem ? 0.5 : 0);
