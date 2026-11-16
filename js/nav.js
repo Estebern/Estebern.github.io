@@ -6,6 +6,7 @@
      'detail'    second screen: opened star with five tags
      'station'   one section card, with PD.state.active = 0..4
 
+   Flight lengths come from config.js (flight).
    The camera rig is attached later by main.js (PD.nav.rig).
    ========================================================= */
 
@@ -20,8 +21,16 @@
   };
 
   var N = PD.CONTENT.length;
+  var flight = PD.config.flight;
 
   function ready() { return !!PD.nav.rig; }
+
+  // Fly the camera to a named pose using a named flight from config.js.
+  function flyTo(poseKind, flightName, stationIndex) {
+    var rig = PD.nav.rig;
+    var f = flight[flightName];
+    rig.fly(rig.pose(poseKind, stationIndex), f.seconds, f.arc);
+  }
 
   PD.nav = {
     rig: null,
@@ -31,7 +40,7 @@
       if (!ready()) return;
       st.mode = 'detail';
       PD.ui.sync();
-      PD.nav.rig.fly(PD.nav.rig.pose('detail'), 1.6, 0);
+      flyTo('detail', 'toDetail');
     },
 
     // anywhere -> section i
@@ -41,7 +50,7 @@
       st.active = i;
       st.mode = 'station';
       PD.ui.sync();
-      PD.nav.rig.fly(PD.nav.rig.pose('station', i), 1.8, from === 'station' ? 5 : 3);
+      flyTo('station', from === 'station' ? 'betweenStations' : 'toStation', i);
     },
 
     // anywhere -> overview
@@ -49,7 +58,7 @@
       if (!ready()) return;
       st.mode = 'overview';
       PD.ui.sync();
-      PD.nav.rig.fly(PD.nav.rig.pose('overview'), 1.6, 0);
+      flyTo('overview', 'toOverview');
     },
 
     // one step back: section -> detail -> overview
@@ -58,7 +67,7 @@
       if (st.mode === 'station') {
         st.mode = 'detail';
         PD.ui.sync();
-        PD.nav.rig.fly(PD.nav.rig.pose('detail'), 1.6, 2);
+        flyTo('detail', 'stationToDetail');
       } else if (st.mode === 'detail') {
         PD.nav.goOverview();
       }

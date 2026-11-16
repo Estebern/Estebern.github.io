@@ -47,10 +47,11 @@
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
+    var bg = PD.config.palette.background;                 // matches --bg in styles.css
     var scene = new THREE.Scene();
-    scene.background = new THREE.Color(0xcfd2d4);          // matches --bg in styles.css
-    scene.fog = new THREE.Fog(0xcfd2d4, 45, 100);
-    var camera = new THREE.PerspectiveCamera(38, 1, 0.1, 200);
+    scene.background = new THREE.Color(bg);
+    scene.fog = new THREE.Fog(bg, 45, 100);
+    var camera = new THREE.PerspectiveCamera(PD.config.camera.fov, 1, 0.1, 200);
 
     /* ---------- 3. Textures, world, camera rig ---------- */
     var textures = PD.createTextures(THREE, renderer.capabilities.getMaxAnisotropy());
@@ -71,11 +72,12 @@
     else window.addEventListener('resize', resize);
 
     // Opening shot: start higher and further back, then glide into the overview.
+    var intro = PD.config.camera.intro;
     var startPose = rig.pose('overview');
-    startPose.pos.add(new THREE.Vector3(0, 7, 8));
+    startPose.pos.add(new THREE.Vector3(intro.from[0], intro.from[1], intro.from[2]));
     rig.snapTo(startPose);
     PD.nav.rig = rig;
-    rig.fly(rig.pose('overview'), 2.4, 0);
+    rig.fly(rig.pose('overview'), intro.seconds, 0);
     PD.ui.hideLoading();
 
     /* ---------- 4. Picking ---------- */
@@ -145,7 +147,7 @@
       // Open or close the emblem depending on the screen.
       var goal = st.mode === 'overview' ? 0 : 1;
       if (spread !== goal) {
-        var step = dt / (PD.RM ? 0.01 : 1.25);
+        var step = dt / (PD.RM ? 0.01 : PD.config.emblem.openSeconds);
         spread = goal > spread ? Math.min(goal, spread + step) : Math.max(goal, spread - step);
       }
 

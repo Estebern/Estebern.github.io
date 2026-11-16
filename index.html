@@ -40,11 +40,26 @@
 
 <!-- Three.js from the CDN, then our scripts. Order matters: each file uses the ones above it. -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-<script src="js/content.js"></script>   <!-- 1. your name and section text (edit this one) -->
-<script src="js/utils.js"></script>     <!-- 2. small helpers: easing, lerp, seeded random -->
-<script src="js/textures.js"></script>  <!-- 3. canvas-drawn textures: desk, section cards, paper, pass -->
-<script src="js/world.js"></script>     <!-- 4. 3D objects: lights, desk, props, stations, emblem -->
-<script src="js/camera.js"></script>    <!-- 5. camera poses, fly-to tween, mouse parallax -->
-<script src="js/nav.js"></script>       <!-- 6. state machine: overview, detail, station -->
-<script src="js/ui.js"></script>        <!-- 7. HTML interface: tabs, tags, buttons, keyboard -->
-<script src="js/main.js"></script>      <!-- 8. boot: renderer, picking, render loop -->
+<script src="js/content.js"></script>          <!--  1. your name and section text (edit this one) -->
+<script src="js/config.js"></script>           <!--  2. every colour, number and position, with names -->
+<script src="js/utils.js"></script>            <!--  3. small helpers: easing, lerp, seeded random -->
+
+<!-- Textures: each file draws one picture with the 2D canvas -->
+<script src="js/textures/desk.js"></script>    <!--  4. metal desk tile -->
+<script src="js/textures/card.js"></script>    <!--  5. section card -->
+<script src="js/textures/sheet.js"></script>   <!--  6. loose paper sheet -->
+<script src="js/textures/pass.js"></script>    <!--  7. name pass -->
+<script src="js/textures/index.js"></script>   <!--  8. gathers the drawers above (keep last in this group) -->
+
+<!-- World: each file builds one part of the 3D scene -->
+<script src="js/world/lights.js"></script>     <!--  9. sun and sky -->
+<script src="js/world/desk.js"></script>       <!-- 10. the floor -->
+<script src="js/world/props.js"></script>      <!-- 11. objects on the desk -->
+<script src="js/world/stations.js"></script>   <!-- 12. the five section cards -->
+<script src="js/world/emblem.js"></script>     <!-- 13. gold blades, disc, glow -->
+<script src="js/world/index.js"></script>      <!-- 14. builds all of the above (keep last in this group) -->
+
+<script src="js/camera.js"></script>           <!-- 15. camera poses, fly-to tween, mouse parallax -->
+<script src="js/nav.js"></script>              <!-- 16. state machine: overview, detail, station -->
+<script src="js/ui.js"></script>               <!-- 17. HTML interface: tabs, tags, buttons, keyboard -->
+<script src="js/main.js"></script>             <!-- 18. boot: renderer, picking, render loop -->

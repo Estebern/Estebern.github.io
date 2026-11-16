@@ -13,6 +13,9 @@
     return u < 0.5 ? 4 * u * u * u : 1 - Math.pow(-2 * u + 2, 3) / 2;
   };
 
+  // Degrees to radians.
+  PD.toRad = function (deg) { return deg * Math.PI / 180; };
+
   // Linear blend between a and b.
   PD.lerp = function (a, b, t) { return a + (b - a) * t; };
 

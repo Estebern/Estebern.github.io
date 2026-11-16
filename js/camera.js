@@ -7,6 +7,7 @@
      detail          high, nearly top-down look at the opened star
      station, i      looking at section card i from the emblem side
 
+   The numbers for each pose are in config.js (camera).
    Poses are pulled back on narrow screens (see fit) so nothing is cut off.
    ========================================================= */
 
@@ -15,41 +16,40 @@
 
   PD.createCameraRig = function (THREE, camera, world) {
     var V3 = THREE.Vector3;
-    var HALF_TAN = Math.tan(19 * Math.PI / 180);   // half of the 38 degree field of view
+    var cfg = PD.config.camera;
+    var HALF_TAN = Math.tan(PD.toRad(cfg.fov / 2));   // half of the field of view
 
-    var pos = new V3(), tgt = new V3();
-    var tween = null;
-    var smoothX = 0, smoothY = 0;                  // eased mouse position for parallax
+    var pos = new V3(), tgt = new V3();   // where the camera is, and what it looks at
+    var tween = null;                      // the flight in progress, if any
+    var smoothX = 0, smoothY = 0;          // eased mouse position for parallax
 
     // Scale factor (>= 1) that moves the camera back until `need` world units fit across the screen.
-    function fit(dist, need) {
-      return Math.max(1, need / (2 * dist * HALF_TAN * camera.aspect));
+    function fit(distance, need) {
+      return Math.max(1, need / (2 * distance * HALF_TAN * camera.aspect));
+    }
+
+    // Pose for the overview or detail screen (both are described by offset, target, width).
+    function fixedPose(c) {
+      var offset = new V3(c.offset[0], c.offset[1], c.offset[2]);
+      var target = new V3(c.target[0], c.target[1], c.target[2]);
+      var k = fit(offset.length(), c.width);
+      return { pos: target.clone().add(offset.multiplyScalar(k)), tgt: target };
+    }
+
+    // Pose for looking at section i: stand between the emblem and the card, above and behind it.
+    function stationPose(i) {
+      var s = cfg.station;
+      var centre = world.stationC[i], dir = world.dirs[i];
+      var k = fit(Math.sqrt(s.back * s.back + s.height * s.height), s.width);
+      return {
+        pos: new V3(centre.x - dir.x * s.back * k, s.height * k, centre.z - dir.z * s.back * k),
+        tgt: new V3(centre.x + dir.x * s.lookAhead, 0, centre.z + dir.z * s.lookAhead)
+      };
     }
 
     function pose(kind, i) {
-      var off, k, t;
-
-      if (kind === 'overview') {
-        off = new V3(0, 10, 5.8);
-        k = fit(off.length(), 11.5);
-        t = new V3(0, 1, 0.3);
-        return { pos: t.clone().add(off.multiplyScalar(k)), tgt: t };
-      }
-
-      if (kind === 'detail') {
-        off = new V3(0, 21, 9);
-        k = fit(off.length(), 15.5);
-        t = new V3(0, 0.5, 0);
-        return { pos: t.clone().add(off.multiplyScalar(k)), tgt: t };
-      }
-
-      // station: stand between the emblem and the card, above and behind it
-      var c = world.stationC[i], d = world.dirs[i];
-      k = fit(Math.sqrt(5.2 * 5.2 + 8 * 8), 11);
-      return {
-        pos: new V3(c.x - d.x * 5.2 * k, 8 * k, c.z - d.z * 5.2 * k),
-        tgt: new V3(c.x + d.x * 0.3, 0, c.z + d.z * 0.3)
-      };
+      if (kind === 'station') return stationPose(i);
+      return fixedPose(cfg[kind]);   // 'overview' or 'detail'
     }
 
     function poseForState(st) {
@@ -77,10 +77,17 @@
         tgt.lerpVectors(tween.t0, tween.t1, k);
         if (u >= 1) tween = null;
       }
+
       var calm = PD.RM ? 0 : 1;
-      smoothX += (px - smoothX) * Math.min(1, dt * 3);
-      smoothY += (py - smoothY) * Math.min(1, dt * 3);
-      camera.position.set(pos.x + smoothX * 0.45 * calm, pos.y, pos.z + smoothY * 0.3 * calm);
+      var ease = Math.min(1, dt * cfg.parallax.smoothing);
+      smoothX += (px - smoothX) * ease;
+      smoothY += (py - smoothY) * ease;
+
+      camera.position.set(
+        pos.x + smoothX * cfg.parallax.x * calm,
+        pos.y,
+        pos.z + smoothY * cfg.parallax.z * calm
+      );
       camera.lookAt(tgt);
       camera.updateMatrixWorld(true);
     }
